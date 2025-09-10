@@ -191,12 +191,50 @@ class _HomeScreenState extends State<HomeScreen> {
 
   /// Extract available balance
   String _extractBalance(String message) {
-    final regex =
-    RegExp(r'Avl bal[: ]+INR\s?([0-9,]+\.?[0-9]*)', caseSensitive: false);
-    final match = regex.firstMatch(message);
-    if (match != null) {
-      return "Available Balance: ₹${match.group(1)}";
+    // regex patterns (all case-insensitive)
+    final patterns = <RegExp>[
+      // Avl bal / Avail bal
+      RegExp(r'(?:avl|avail(?:able)?)\s*bal(?:ance)?[:\s\-]*?(?:is\s*)?(?:INR|Rs\.?|₹)?\s*([0-9][0-9,\.]*)',
+          caseSensitive: false),
+      // Available balance
+      RegExp(r'available\s+balance[:\s\-]*?(?:is\s*)?(?:INR|Rs\.?|₹)?\s*([0-9][0-9,\.]*)',
+          caseSensitive: false),
+      // Balance / Bal
+      RegExp(r'\b(?:bal|balance)\b[:\s\-]*?(?:is\s*)?(?:INR|Rs\.?|₹)?\s*([0-9][0-9,\.]*)',
+          caseSensitive: false),
+      // Generic with currency prefix
+      RegExp(r'(?:INR|Rs\.?|₹)\s*([0-9][0-9,\.]*)', caseSensitive: false),
+    ];
+
+    for (final p in patterns) {
+      final m = p.firstMatch(message);
+      if (m != null && m.groupCount >= 1) {
+        final raw = m.group(1)!;
+        final normalized = _normalizeAmountString(raw);
+        if (normalized != null) return "Available Balance: ₹$normalized";
+      }
     }
+
+    // fallback: last number-like value
+    final genericAmount = RegExp(r'([0-9][0-9,\.]*)');
+    final allMatches = genericAmount.allMatches(message).toList();
+    if (allMatches.isNotEmpty) {
+      final raw = allMatches.last.group(1)!;
+      final normalized = _normalizeAmountString(raw);
+      if (normalized != null) return "Available Balance: ₹$normalized";
+    }
+
     return "Balance not found";
   }
+
+  String? _normalizeAmountString(String raw) {
+    try {
+      final cleaned = raw.replaceAll(RegExp(r'[, ]'), '');
+      final val = double.parse(cleaned);
+      return NumberFormat('#,##0.00', 'en_IN').format(val);
+    } catch (_) {
+      return null;
+    }
+  }
+
 }
