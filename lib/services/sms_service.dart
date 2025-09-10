@@ -10,38 +10,45 @@ import '../services/notification_service.dart';
 class SmsService {
   final EasySmsReceiver _receiver = EasySmsReceiver.instance;
 
-  /// Start listening to incoming SMS and show ONLY "New Expense" notification.
   Future<void> start(BuildContext context) async {
-    final status = await Permission.sms.request();
-    if (!status.isGranted) {
-      // You might want to surface a snackbar instead of print.
-      // But keeping print to avoid UI side-effects here.
-      print("❌ SMS permission not granted");
-      return;
-    }
+    var status = await Permission.sms.request();
+    if (!status.isGranted) return;
 
-    _receiver.listenIncomingSms(onNewMessage: (msg) {
-      final body = msg.body ?? "";
-      final amount = extractAmount(body); // <-- public method
+    _receiver.listenIncomingSms(
+      onNewMessage: (msg) async {
+        final body = msg.body ?? "";
 
-      if (amount != null) {
-        NotificationService().showNotification(
-          DateTime.now().millisecondsSinceEpoch ~/ 1000, // unique id
-          "🆕 New Expense",
-          "₹${amount.toStringAsFixed(2)} (Uncategorized)",
-          payload: body, // send full SMS body so we can parse on tap
+        // ✅ Only process if SMS looks like a bank transaction
+        if (!_isBankMessage(body)) return;
+
+        final amount = _extractAmount(body);
+        if (amount == null) return;
+
+        // ✅ Save expense immediately as Uncategorized
+        final exp = Expense(
+          title: body,
+          amount: amount,
+          dateTime: DateTime.now(),
+          category: "Uncategorized",
         );
-      }
-    });
+        await Provider.of<ExpenseProvider>(context, listen: false)
+            .addExpense(exp);
+
+        // ✅ Show notification using NotificationService
+        await NotificationService().showNotification(
+          DateTime.now().millisecondsSinceEpoch ~/ 1000, // unique ID
+          "💸 ${_getTransactionType(body)}",
+          "₹${amount.toStringAsFixed(2)} - Tap to categorize",
+          payload: "uncategorized",
+        );
+      },
+    );
   }
 
-  /// PUBLIC: expose amount parser so other files (e.g., main.dart) can use it.
-  double? extractAmount(String text) => _extractAmount(text);
-
-  /// PRIVATE: actual parsing implementation.
+  /// Extract amount from SMS text
   double? _extractAmount(String text) {
-    // Matches: INR 1,234.56  | INR123 | INR 450
-    final regex = RegExp(r'INR\s?([\d,]+(?:\.\d{1,2})?)', caseSensitive: false);
+    final regex =
+    RegExp(r'INR\s?([\d,]+(?:\.\d{1,2})?)', caseSensitive: false);
     final m = regex.firstMatch(text);
     if (m != null) {
       return double.tryParse(m.group(1)!.replaceAll(",", ""));
@@ -49,57 +56,45 @@ class SmsService {
     return null;
   }
 
-  /// Show categorize popup -> saves to DB after user picks a category.
-  void showPopup(BuildContext context, String message) {
-    final amount = extractAmount(message) ?? 0.0;
-
-    showDialog(
-      context: context,
-      builder: (ctx) {
-        return AlertDialog(
-          title: const Text("🆕 New Expense"),
-          content: Text("Amount: ₹${amount.toStringAsFixed(2)}\n\nSelect a category"),
-          actions: [
-            ...["Food", "Transport", "Rent", "Entertainment", "Other"].map((cat) {
-              return TextButton(
-                onPressed: () {
-                  Navigator.of(ctx).pop();
-                  final exp = Expense(
-                    message: message,
-                    category: cat,
-                    amount: amount,
-                    date: DateTime.now(),
-                  );
-                  Provider.of<ExpenseProvider>(context, listen: false).addExpense(exp);
-                },
-                child: Text(cat),
-              );
-            }).toList(),
-          ],
-        );
-      },
-    );
+  /// Detect if SMS is a bank-related transaction
+  bool _isBankMessage(String text) {
+    final lower = text.toLowerCase();
+    return lower.contains("debited") ||
+        lower.contains("credited") ||
+        lower.contains("txn") ||
+        lower.contains("a/c") ||
+        lower.contains("account");
   }
 
-  /// Simulate receiving an SMS: shows the same "New Expense" notification.
-  void simulateMessage(BuildContext context, String body) {
-    final amount = extractAmount(body);
-    if (amount == null) {
-      // If we can't parse, still notify so user can open and categorize.
-      NotificationService().showNotification(
-        DateTime.now().millisecondsSinceEpoch ~/ 1000,
-        "🆕 New Expense",
-        "Tap to categorize",
-        payload: body,
-      );
-      return;
-    }
+  /// Determine transaction type for notification title
+  String _getTransactionType(String text) {
+    final lower = text.toLowerCase();
+    if (lower.contains("debited")) return "Debited";
+    if (lower.contains("credited")) return "Credited";
+    return "Transaction";
+  }
 
-    NotificationService().showNotification(
+  /// Simulate SMS for testing without real SMS
+  void simulateMessage(BuildContext context, String body) async {
+    if (!_isBankMessage(body)) return;
+
+    final amount = _extractAmount(body);
+    if (amount == null) return;
+
+    final exp = Expense(
+      title: body,
+      amount: amount,
+      dateTime: DateTime.now(),
+      category: "Uncategorized",
+    );
+    await Provider.of<ExpenseProvider>(context, listen: false)
+        .addExpense(exp);
+
+    await NotificationService().showNotification(
       DateTime.now().millisecondsSinceEpoch ~/ 1000,
-      "🆕 New Expense",
-      "₹${amount.toStringAsFixed(2)} (Uncategorized)",
-      payload: body,
+      "💸 ${_getTransactionType(body)}",
+      "₹${amount.toStringAsFixed(2)} - Tap to categorize",
+      payload: "uncategorized",
     );
   }
 }

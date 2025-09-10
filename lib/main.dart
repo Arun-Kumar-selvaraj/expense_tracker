@@ -2,42 +2,55 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import 'providers/expense_provider.dart';
-import 'services/notification_service.dart';
-import 'services/sms_service.dart';
 import 'screens/home_screen.dart';
+import 'screens/uncategorized_screen.dart';
+import 'services/notification_service.dart';
 
-final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
-final SmsService smsService = SmsService(); // reuse the same instance
-
-Future<void> main() async {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize notifications with tap callback:
+  // ✅ Initialize notification service
   await NotificationService().initNotifications((payload) {
-    final ctx = navigatorKey.currentContext;
-    if (ctx != null) {
-      // On tap -> open categorize popup
-      smsService.showPopup(ctx, payload);
+    if (payload == "uncategorized") {
+      _navigatorKey.currentState?.push(
+        MaterialPageRoute(builder: (_) => const UncategorizedScreen()),
+      );
     }
   });
+
+  // ✅ Check if app was launched via a notification
+  final details = await NotificationService().getLaunchDetails();
+  String? launchPayload = details?.notificationResponse?.payload;
 
   runApp(
     ChangeNotifierProvider(
       create: (_) => ExpenseProvider(),
-      child: const MyApp(),
+      child: MyApp(initialPayload: launchPayload),
     ),
   );
 }
 
+// ✅ Global navigator key for notification navigation
+final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
+
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  final String? initialPayload;
+  const MyApp({super.key, this.initialPayload});
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      navigatorKey: navigatorKey, // needed to show popup from tap callback
       title: 'Expense Tracker',
+      navigatorKey: _navigatorKey,
       theme: ThemeData(primarySwatch: Colors.blue),
-      home: const HomeScreen(),
+      home: _buildInitialScreen(),
     );
+  }
+
+  Widget _buildInitialScreen() {
+    if (initialPayload == "uncategorized") {
+      return const UncategorizedScreen();
+    }
+    return const HomeScreen();
   }
 }

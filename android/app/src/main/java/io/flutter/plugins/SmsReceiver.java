@@ -53,15 +53,15 @@ public class SmsReceiver extends BroadcastReceiver {
             PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
         );
 
-        NotificationCompat.Builder builder = new NotificationCompat.Builder(context, CHANNEL_ID)
-                .setSmallIcon(android.R.drawable.ic_dialog_info)
-                .setContentTitle("Expense Detected")
-                .setContentText(body)
-                .setStyle(new NotificationCompat.BigTextStyle().bigText(body))
-                .setPriority(NotificationCompat.PRIORITY_HIGH)
-                .setContentIntent(pendingIntent)
-                .setAutoCancel(true);
+//        NotificationCompat.Builder builder = new NotificationCompat.Builder(context, CHANNEL_ID)
+//                .setSmallIcon(android.R.drawable.ic_dialog_info)
+//                .setContentTitle("Expense Detected")
+//                .setContentText(body)
+//                .setStyle(new NotificationCompat.BigTextStyle().bigText(body))
+//                .setPriority(NotificationCompat.PRIORITY_HIGH)
+//                .setContentIntent(pendingIntent)
+//                .setAutoCancel(true);
 
-        NotificationManagerCompat.from(context).notify((int) System.currentTimeMillis(), builder.build());
+       // NotificationManagerCompat.from(context).notify((int) System.currentTimeMillis(), builder.build());
     }
 }

@@ -3,13 +3,17 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 typedef OnNotificationTap = void Function(String payload);
 
 class NotificationService {
+  // Singleton pattern
   static final NotificationService _instance = NotificationService._internal();
   factory NotificationService() => _instance;
   NotificationService._internal();
 
-  final FlutterLocalNotificationsPlugin _plugin = FlutterLocalNotificationsPlugin();
+  final FlutterLocalNotificationsPlugin _plugin =
+  FlutterLocalNotificationsPlugin();
+
   OnNotificationTap? _onTap;
 
+  /// Initialize notifications
   Future<void> initNotifications(OnNotificationTap onTap) async {
     _onTap = onTap;
 
@@ -27,6 +31,12 @@ class NotificationService {
     );
   }
 
+  /// Check if app was launched via a notification
+  Future<NotificationAppLaunchDetails?> getLaunchDetails() async {
+    return await _plugin.getNotificationAppLaunchDetails();
+  }
+
+  /// Show a notification for a new expense
   Future<void> showNotification(
       int id,
       String title,
@@ -49,5 +59,10 @@ class NotificationService {
       details,
       payload: payload,
     );
+  }
+
+  /// Cancel all notifications (optional helper)
+  Future<void> cancelAll() async {
+    await _plugin.cancelAll();
   }
 }

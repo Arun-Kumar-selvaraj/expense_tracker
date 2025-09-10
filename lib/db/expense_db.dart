@@ -3,9 +3,9 @@ import 'package:path/path.dart';
 import '../models/expense.dart';
 
 class DatabaseHelper {
-  static final DatabaseHelper _instance = DatabaseHelper._internal();
-  factory DatabaseHelper() => _instance;
+  static final DatabaseHelper instance = DatabaseHelper._internal();
   DatabaseHelper._internal();
+  factory DatabaseHelper() => instance;
 
   static Database? _database;
 
@@ -26,23 +26,33 @@ class DatabaseHelper {
         await db.execute('''
           CREATE TABLE expenses(
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            message TEXT,
-            category TEXT,
+            title TEXT,
             amount REAL,
-            date TEXT
+            dateTime TEXT,
+            category TEXT
           )
         ''');
       },
     );
   }
 
-  Future<int> insertExpense(Map<String, dynamic> row) async {
+  Future<int> insertExpense(Expense expense) async {
     final db = await database;
-    return await db.insert('expenses', row);
+    return await db.insert('expenses', expense.toMap());
   }
 
   Future<List<Map<String, dynamic>>> getExpenses() async {
     final db = await database;
     return await db.query('expenses', orderBy: 'id DESC');
+  }
+
+  Future<void> updateExpenseCategory(int id, String category) async {
+    final db = await database;
+    await db.update(
+      'expenses',
+      {'category': category},
+      where: 'id = ?',
+      whereArgs: [id],
+    );
   }
 }
