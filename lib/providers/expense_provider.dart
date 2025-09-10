@@ -23,6 +23,11 @@ class ExpenseProvider with ChangeNotifier {
     await fetchExpenses();
   }
 
+  Future<void> deleteExpense(int id) async {
+    await DatabaseHelper.instance.deleteExpense(id);
+    await fetchExpenses();
+  }
+
   List<Expense> get uncategorizedExpenses =>
       _expenses.where((e) => e.category == "Uncategorized").toList();
 }

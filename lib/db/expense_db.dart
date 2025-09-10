@@ -55,4 +55,13 @@ class DatabaseHelper {
       whereArgs: [id],
     );
   }
+
+  Future<void> deleteExpense(int id) async {
+    final db = await database;
+    await db.delete(
+      'expenses',
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
 }
