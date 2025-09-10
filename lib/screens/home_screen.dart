@@ -191,37 +191,47 @@ class _HomeScreenState extends State<HomeScreen> {
 
   /// Extract available balance
   String _extractBalance(String message) {
-    // regex patterns (all case-insensitive)
+    final lower = message.toLowerCase();
+
+    // Primary patterns
     final patterns = <RegExp>[
-      // Avl bal / Avail bal
-      RegExp(r'(?:avl|avail(?:able)?)\s*bal(?:ance)?[:\s\-]*?(?:is\s*)?(?:INR|Rs\.?|₹)?\s*([0-9][0-9,\.]*)',
-          caseSensitive: false),
-      // Available balance
-      RegExp(r'available\s+balance[:\s\-]*?(?:is\s*)?(?:INR|Rs\.?|₹)?\s*([0-9][0-9,\.]*)',
-          caseSensitive: false),
-      // Balance / Bal
-      RegExp(r'\b(?:bal|balance)\b[:\s\-]*?(?:is\s*)?(?:INR|Rs\.?|₹)?\s*([0-9][0-9,\.]*)',
-          caseSensitive: false),
-      // Generic with currency prefix
-      RegExp(r'(?:INR|Rs\.?|₹)\s*([0-9][0-9,\.]*)', caseSensitive: false),
+      RegExp(
+        r'(?:avl|avail(?:able)?)\s*bal(?:ance)?[^\d]*(?:is\s*)?(?:inr|rs\.?|₹)?\s*([\d,]+\.\d+|[\d,]+)',
+        caseSensitive: false,
+      ),
+      RegExp(
+        r'available\s+balance[^\d]*(?:is\s*)?(?:inr|rs\.?|₹)?\s*([\d,]+\.\d+|[\d,]+)',
+        caseSensitive: false,
+      ),
+      RegExp(
+        r'\b(?:bal|balance)\b[^\d]*(?:is\s*)?(?:inr|rs\.?|₹)?\s*([\d,]+\.\d+|[\d,]+)',
+        caseSensitive: false,
+      ),
     ];
 
     for (final p in patterns) {
       final m = p.firstMatch(message);
-      if (m != null && m.groupCount >= 1) {
+      if (m != null) {
         final raw = m.group(1)!;
         final normalized = _normalizeAmountString(raw);
         if (normalized != null) return "Available Balance: ₹$normalized";
       }
     }
 
-    // fallback: last number-like value
-    final genericAmount = RegExp(r'([0-9][0-9,\.]*)');
-    final allMatches = genericAmount.allMatches(message).toList();
-    if (allMatches.isNotEmpty) {
-      final raw = allMatches.last.group(1)!;
-      final normalized = _normalizeAmountString(raw);
-      if (normalized != null) return "Available Balance: ₹$normalized";
+    // 🔑 Fallback: look for keyword and next number
+    final balanceKeywords = ["avl bal", "available balance", "closing bal", "balance", "bal"];
+    for (final keyword in balanceKeywords) {
+      final idx = lower.indexOf(keyword);
+      if (idx != -1) {
+        final substring = message.substring(idx);
+        final numberRegex = RegExp(r'(?:inr|rs\.?|₹)?\s*([\d,]+\.\d+|[\d,]+)', caseSensitive: false);
+        final match = numberRegex.firstMatch(substring);
+        if (match != null) {
+          final raw = match.group(1)!;
+          final normalized = _normalizeAmountString(raw);
+          if (normalized != null) return "Available Balance: ₹$normalized";
+        }
+      }
     }
 
     return "Balance not found";
@@ -229,12 +239,12 @@ class _HomeScreenState extends State<HomeScreen> {
 
   String? _normalizeAmountString(String raw) {
     try {
-      final cleaned = raw.replaceAll(RegExp(r'[, ]'), '');
-      final val = double.parse(cleaned);
-      return NumberFormat('#,##0.00', 'en_IN').format(val);
-    } catch (_) {
+      final cleaned = raw.replaceAll(',', '').trim();
+      return double.parse(cleaned).toStringAsFixed(2);
+    } catch (e) {
       return null;
     }
   }
+
 
 }
