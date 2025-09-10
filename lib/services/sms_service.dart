@@ -75,26 +75,26 @@ class SmsService {
   }
 
   /// Simulate SMS for testing without real SMS
-  void simulateMessage(BuildContext context, String body) async {
-    if (!_isBankMessage(body)) return;
-
-    final amount = _extractAmount(body);
-    if (amount == null) return;
-
-    final exp = Expense(
-      title: body,
-      amount: amount,
-      dateTime: DateTime.now(),
-      category: "Uncategorized",
-    );
-    await Provider.of<ExpenseProvider>(context, listen: false)
-        .addExpense(exp);
-
-    await NotificationService().showNotification(
-      DateTime.now().millisecondsSinceEpoch ~/ 1000,
-      "💸 ${_getTransactionType(body)}",
-      "₹${amount.toStringAsFixed(2)} - Tap to categorize",
-      payload: "uncategorized",
-    );
-  }
+  // void simulateMessage(BuildContext context, String body) async {
+  //   if (!_isBankMessage(body)) return;
+  //
+  //   final amount = _extractAmount(body);
+  //   if (amount == null) return;
+  //
+  //   final exp = Expense(
+  //     title: body,
+  //     amount: amount,
+  //     dateTime: DateTime.now(),
+  //     category: "Uncategorized",
+  //   );
+  //   await Provider.of<ExpenseProvider>(context, listen: false)
+  //       .addExpense(exp);
+  //
+  //   await NotificationService().showNotification(
+  //     DateTime.now().millisecondsSinceEpoch ~/ 1000,
+  //     "💸 ${_getTransactionType(body)}",
+  //     "₹${amount.toStringAsFixed(2)} - Tap to categorize",
+  //     payload: "uncategorized",
+  //   );
+  // }
 }

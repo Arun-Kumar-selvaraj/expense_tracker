@@ -29,6 +29,10 @@ class _HomeScreenState extends State<HomeScreen> {
     final provider = Provider.of<ExpenseProvider>(context);
     final list = provider.expenses;
 
+    // Count uncategorized expenses
+    final uncategorizedCount =
+        list.where((e) => e.category == "Uncategorized").length;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Expenses'),
@@ -45,134 +49,137 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
-      body: Column(
-        children: [
-          // ✅ Visible button for Uncategorized transactions
-          Padding(
-            padding: const EdgeInsets.all(12.0),
-            child: SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                icon: const Icon(Icons.category_outlined),
-                label: const Text('Uncategorized Transactions'),
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                        builder: (_) => const UncategorizedScreen()),
-                  );
-                },
-              ),
-            ),
-          ),
 
-          // List of Expenses
-          Expanded(
-            child: list.isEmpty
-                ? const Center(child: Text('No expenses yet'))
-                : ListView.builder(
-              itemCount: list.length,
-              itemBuilder: (_, i) {
-                final e = list[i];
-                final formattedDate =
-                DateFormat("dd MMM yyyy, hh:mm a").format(e.dateTime);
+      // Expense list only (removed top button)
+      body: list.isEmpty
+          ? const Center(child: Text('No expenses yet'))
+          : ListView.builder(
+        itemCount: list.length,
+        itemBuilder: (_, i) {
+          final e = list[i];
+          final formattedDate =
+          DateFormat("dd MMM yyyy, hh:mm a").format(e.dateTime);
 
-                return Card(
-                  margin: const EdgeInsets.symmetric(
-                      horizontal: 12, vertical: 6),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
-                  elevation: 3,
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // 🔹 Top row: Amount (left) + Category (right)
-                        Row(
-                          mainAxisAlignment:
-                          MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              "₹${e.amount.toStringAsFixed(2)}",
-                              style: TextStyle(
-                                fontSize: 22,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.red.shade700,
-                              ),
-                            ),
-                            Text(
-                              e.category,
-                              style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
+          return Card(
+            margin:
+            const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12)),
+            elevation: 3,
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // 🔹 Amount + Category
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        "₹${e.amount.toStringAsFixed(2)}",
+                        style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.red.shade700,
                         ),
-
-                        const SizedBox(height: 6),
-
-                        // 🔹 Date & Time
-                        Text(
-                          formattedDate,
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: Colors.grey.shade600,
-                          ),
+                      ),
+                      Text(
+                        e.category,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
                         ),
+                      ),
+                    ],
+                  ),
 
-                        const SizedBox(height: 8),
+                  const SizedBox(height: 6),
 
-                        // 🔹 Extracted Name (after "to")
-                        Text(
-                          _extractName(e.title),
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-
-                        const SizedBox(height: 6),
-
-                        // 🔹 Available Balance
-                        Text(
-                          _extractBalance(e.title),
-                          style: const TextStyle(
-                            fontSize: 14,
-                            color: Colors.black87,
-                          ),
-                        ),
-                      ],
+                  // 🔹 Date & Time
+                  Text(
+                    formattedDate,
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: Colors.grey.shade600,
                     ),
                   ),
-                );
-              },
+
+                  const SizedBox(height: 8),
+
+                  // 🔹 Extracted Name (after "to")
+                  Text(
+                    _extractName(e.title),
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+
+                  const SizedBox(height: 6),
+
+                  // 🔹 Available Balance
+                  Text(
+                    _extractBalance(e.title),
+                    style: const TextStyle(
+                      fontSize: 14,
+                      color: Colors.black87,
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
+          );
+        },
       ),
-      floatingActionButton: Column(
-        mainAxisAlignment: MainAxisAlignment.end,
+
+      // FAB with badge for Uncategorized
+      floatingActionButton: Stack(
+        clipBehavior: Clip.none,
         children: [
           FloatingActionButton(
-            heroTag: "sim_btn",
-            child: const Icon(Icons.sms),
-            tooltip: "Simulate SMS",
+            heroTag: "uncat_btn",
+            child: const Icon(Icons.category),
+            tooltip: "View Uncategorized",
             onPressed: () {
-              sms.simulateMessage(
+              Navigator.push(
                 context,
-                "INR 500 spent at Zomatoo on 02-Sep. Avl bal: INR 12,345.50 to Arun",
+                MaterialPageRoute(builder: (_) => const UncategorizedScreen()),
               );
             },
           ),
+
+          if (uncategorizedCount > 0)
+            Positioned(
+              right: -4,
+              top: -4,
+              child: Container(
+                padding: const EdgeInsets.all(6),
+                decoration: const BoxDecoration(
+                  color: Colors.red,
+                  shape: BoxShape.circle,
+                ),
+                constraints: const BoxConstraints(
+                  minWidth: 22,
+                  minHeight: 22,
+                ),
+                child: Text(
+                  '$uncategorizedCount',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            ),
         ],
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
     );
   }
 
-  /// Extract name after "to" (basic parsing)
+  /// Extract name after "to"
   String _extractName(String message) {
     final regex = RegExp(r'to\s+([A-Za-z0-9 ]+)', caseSensitive: false);
     final match = regex.firstMatch(message);
@@ -184,9 +191,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   /// Extract available balance
   String _extractBalance(String message) {
-    final regex = RegExp(
-        r'Avl bal[: ]+INR\s?([0-9,]+\.?[0-9]*)',
-        caseSensitive: false);
+    final regex =
+    RegExp(r'Avl bal[: ]+INR\s?([0-9,]+\.?[0-9]*)', caseSensitive: false);
     final match = regex.firstMatch(message);
     if (match != null) {
       return "Available Balance: ₹${match.group(1)}";
